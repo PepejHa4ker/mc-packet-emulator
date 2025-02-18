@@ -1,7 +1,7 @@
+use crate::protocol::fields::{AsyncReadField, AsyncWriteField, Long};
 use tokio::io;
 use tokio::io::{AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt};
 use uuid::Uuid;
-use crate::protocol::fields::{AsyncReadField, AsyncWriteField, Long};
 
 pub async fn read_u16_be<R: AsyncRead + Unpin>(reader: &mut R) -> io::Result<u16> {
     let mut buf = [0u8; 2];
@@ -89,7 +89,10 @@ pub async fn read_varint<R: AsyncRead + Unpin>(reader: &mut R) -> io::Result<i32
         result |= value << (7 * num_read);
         num_read += 1;
         if num_read > 5 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "VarInt is too big"));
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "VarInt is too big",
+            ));
         }
         if (byte & 0x80) == 0 {
             break;
@@ -115,14 +118,20 @@ pub async fn write_varint<W: AsyncWrite + Unpin>(writer: &mut W, mut value: i32)
 pub async fn read_varstring<R: AsyncRead + Unpin>(reader: &mut R) -> io::Result<String> {
     let len = read_varint(reader).await?;
     if len < 0 {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "String length < 0"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "String length < 0",
+        ));
     }
     let len = len as usize;
     let mut buf = vec![0u8; len];
     reader.read_exact(&mut buf).await?;
     match String::from_utf8(buf) {
         Ok(s) => Ok(s),
-        Err(_) => Err(io::Error::new(io::ErrorKind::InvalidData, "Invalid UTF-8 string")),
+        Err(_) => Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Invalid UTF-8 string",
+        )),
     }
 }
 
@@ -157,7 +166,10 @@ pub async fn write_f64_be<W: AsyncWrite + Unpin>(writer: &mut W, value: f64) -> 
 pub async fn read_bytearray<R: AsyncRead + Unpin>(reader: &mut R) -> io::Result<Vec<u8>> {
     let len = read_varint(reader).await?;
     if len < 0 {
-        return Err(io::Error::new(io::ErrorKind::InvalidData, "Negative array length"));
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidData,
+            "Negative array length",
+        ));
     }
     let mut buf = vec![0u8; len as usize];
     reader.read_exact(&mut buf).await?;
@@ -176,9 +188,16 @@ pub async fn read_uuid<R: AsyncRead + Unpin + Send>(reader: &mut R) -> io::Resul
     Ok(Uuid::from_u64_pair(most_sig, least_sig))
 }
 
-pub async fn write_uuid<W: AsyncWrite + Unpin + Send>(writer: &mut W, data: &Uuid) -> io::Result<()> {
+pub async fn write_uuid<W: AsyncWrite + Unpin + Send>(
+    writer: &mut W,
+    data: &Uuid,
+) -> io::Result<()> {
     let (most_sig, least_sig) = data.as_u64_pair();
-    Long(most_sig as i64 ^ (1 << 63)).write_field(writer).await?;
-    Long(least_sig as i64 ^ (1 << 63)).write_field(writer).await?;
+    Long(most_sig as i64 ^ (1 << 63))
+        .write_field(writer)
+        .await?;
+    Long(least_sig as i64 ^ (1 << 63))
+        .write_field(writer)
+        .await?;
     Ok(())
 }

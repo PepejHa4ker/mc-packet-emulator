@@ -1,10 +1,10 @@
+use crate::protocol::fields::uuid::Uuid;
+use crate::protocol::fields::{AsyncReadField, AsyncWriteField, Byte, Double, VarInt, VarString};
+use async_trait::async_trait;
 use std::future::Future;
 use std::io;
 use std::pin::Pin;
-use async_trait::async_trait;
 use tokio::io::{AsyncRead, AsyncWrite};
-use crate::protocol::fields::{AsyncReadField, AsyncWriteField, Byte, Double, VarInt, VarString};
-use crate::protocol::fields::uuid::Uuid;
 
 #[derive(Debug, Clone)]
 pub struct EntityAttributeModifier {
@@ -22,7 +22,9 @@ pub struct EntityProperty {
 
 #[async_trait]
 impl AsyncReadField for EntityProperty {
-    fn read_field<'a, R>(reader: &'a mut R) -> Pin<Box<dyn Future<Output = io::Result<Self>> + Send + 'a>>
+    fn read_field<'a, R>(
+        reader: &'a mut R,
+    ) -> Pin<Box<dyn Future<Output = io::Result<Self>> + Send + 'a>>
     where
         R: AsyncRead + Unpin + Send + 'a,
     {
@@ -53,17 +55,21 @@ impl AsyncReadField for EntityProperty {
     }
 }
 
-
 #[async_trait]
 impl AsyncWriteField for EntityProperty {
-    fn write_field<'a, W>(&'a self, writer: &'a mut W) -> Pin<Box<dyn Future<Output = io::Result<()>> + Send + 'a>>
+    fn write_field<'a, W>(
+        &'a self,
+        writer: &'a mut W,
+    ) -> Pin<Box<dyn Future<Output = io::Result<()>> + Send + 'a>>
     where
         W: AsyncWrite + Unpin + Send + 'a,
     {
         Box::pin(async move {
             self.key.write_field(writer).await?;
             self.value.write_field(writer).await?;
-            VarInt(self.modifiers.len() as i32).write_field(writer).await?;
+            VarInt(self.modifiers.len() as i32)
+                .write_field(writer)
+                .await?;
 
             for modifier in &self.modifiers {
                 modifier.uuid.write_field(writer).await?;

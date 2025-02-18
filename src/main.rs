@@ -1,4 +1,4 @@
-use crate::protocol::packets::{LoginStart};
+use crate::protocol::packets::LoginStart;
 use connection::{Connection, ConnectionState};
 use protocol::fields::{UShort, VarInt, VarString};
 use protocol::packets::handshake::Handshake;
@@ -40,8 +40,6 @@ async fn main() -> io::Result<()> {
         };
         conn_lock.send_packet(&login_start).await?;
         println!("LoginStart отправлен.");
-
-
     }
 
     loop {

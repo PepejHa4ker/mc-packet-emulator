@@ -44,7 +44,6 @@ macro_rules! packet_field {
     }
 }
 
-
 #[macro_export]
 macro_rules! map_field {
     ($name:ident, $key:ty, $value:ty) => {

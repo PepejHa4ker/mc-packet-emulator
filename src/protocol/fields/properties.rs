@@ -1,8 +1,8 @@
+use crate::protocol::fields::{AsyncReadField, AsyncWriteField, VarInt, VarString};
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use tokio::io::{AsyncRead, AsyncWrite};
-use crate::protocol::fields::{AsyncReadField, AsyncWriteField, VarInt, VarString};
 
 #[derive(Debug, Clone)]
 pub struct Properties(pub HashMap<<VarString as std::ops::Deref>::Target, VarInt>);
@@ -14,7 +14,9 @@ impl Properties {
 }
 
 impl AsyncReadField for Properties {
-    fn read_field<'a, R>(r: &'a mut R) -> Pin<Box<dyn Future<Output = std::io::Result<Self>> + Send + 'a>>
+    fn read_field<'a, R>(
+        r: &'a mut R,
+    ) -> Pin<Box<dyn Future<Output = std::io::Result<Self>> + Send + 'a>>
     where
         R: AsyncRead + Unpin + Send + 'a,
     {
@@ -32,7 +34,10 @@ impl AsyncReadField for Properties {
 }
 
 impl AsyncWriteField for Properties {
-    fn write_field<'a, W>(&'a self, w: &'a mut W) -> Pin<Box<dyn Future<Output = std::io::Result<()>> + Send + 'a>>
+    fn write_field<'a, W>(
+        &'a self,
+        w: &'a mut W,
+    ) -> Pin<Box<dyn Future<Output = std::io::Result<()>> + Send + 'a>>
     where
         W: AsyncWrite + Unpin + Send + 'a,
     {

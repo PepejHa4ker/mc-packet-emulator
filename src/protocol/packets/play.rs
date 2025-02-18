@@ -245,7 +245,6 @@ packets! {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct MapChunkBulk {
     pub chunk_x: Vec<i32>,
@@ -276,11 +275,15 @@ impl MapChunkBulk {
         let decompressed_buf = task::spawn_blocking(move || -> io::Result<Vec<u8>> {
             let mut decompressor = Decompress::new(true);
             let mut output = vec![0u8; expected_decompressed_size];
-            decompressor.decompress(&compressed_data_clone, &mut output, FlushDecompress::Finish)
-                .map_err(|_| io::Error::new(io::ErrorKind::InvalidData, "Bad compressed data format"))?;
+            decompressor
+                .decompress(&compressed_data_clone, &mut output, FlushDecompress::Finish)
+                .map_err(|_| {
+                    io::Error::new(io::ErrorKind::InvalidData, "Bad compressed data format")
+                })?;
             output.truncate(decompressor.total_out() as usize);
             Ok(output)
-        }).await??;
+        })
+        .await??;
 
         let mut chunk_x = Vec::with_capacity(chunk_count);
         let mut chunk_z = Vec::with_capacity(chunk_count);
@@ -314,7 +317,10 @@ impl MapChunkBulk {
             }
 
             if offset + chunk_len > decompressed_buf.len() as i32 {
-                return Err(io::Error::new(io::ErrorKind::UnexpectedEof, "Not enough decompressed data"));
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    "Not enough decompressed data",
+                ));
             }
             let data = decompressed_buf[offset as usize..(offset + chunk_len) as usize].to_vec();
             chunk_data.push(data);
@@ -356,9 +362,7 @@ impl AsyncPacket for MapChunkBulk {
         self
     }
 
-    async fn write_to_boxed(&self, _: &mut (dyn AsyncWrite + Unpin + Send)) -> io::Result<()>
-    {
+    async fn write_to_boxed(&self, _: &mut (dyn AsyncWrite + Unpin + Send)) -> io::Result<()> {
         unimplemented!("Write for MapChunkBulk is not implemented")
     }
 }
-

@@ -1,5 +1,5 @@
-use std::any::Any;
 use async_trait::async_trait;
+use std::any::Any;
 use tokio::io;
 use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
 
@@ -11,10 +11,13 @@ pub enum Bound {
 
 #[macro_export]
 macro_rules! bound_from_ident {
-    (C) => { $crate::protocol::packets::Bound::Client };
-    (S) => { $crate::protocol::packets::Bound::Server };
+    (C) => {
+        $crate::protocol::packets::Bound::Client
+    };
+    (S) => {
+        $crate::protocol::packets::Bound::Server
+    };
 }
-
 
 #[async_trait::async_trait]
 pub trait AsyncPacket: Any + Send + Sync {
@@ -35,13 +38,12 @@ impl AsyncPacketExt for dyn AsyncPacket + Send {
     }
 }
 
-
+pub mod decoder;
 pub mod handshake;
 pub mod login;
-pub mod decoder;
 pub mod play;
 
+use crate::connection::ConnectionState;
+pub use handshake::*;
 pub use login::*;
 pub use play::*;
-pub use handshake::*;
-use crate::connection::ConnectionState;

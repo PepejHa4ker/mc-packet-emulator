@@ -1,6 +1,6 @@
+use crate::packet_field;
 use tokio::io;
 use tokio::io::{AsyncRead, AsyncWrite};
-use crate::packet_field;
 
 packet_field! {
     Boolean(bool) {

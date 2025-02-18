@@ -1,10 +1,10 @@
+use crate::connection::ConnectionState;
+use crate::protocol::io::read_varint;
+use crate::protocol::packets::play::*;
+use crate::protocol::packets::{AsyncPacket, Bound, PlayerAbilities};
 use std::io;
 use std::io::Cursor;
 use tokio::io::{AsyncRead, AsyncReadExt};
-use crate::connection::ConnectionState;
-use crate::protocol::io::read_varint;
-use crate::protocol::packets::{AsyncPacket, Bound, PlayerAbilities};
-use crate::protocol::packets::play::*;
 
 #[macro_export]
 macro_rules! try_decode_packet {
@@ -28,8 +28,6 @@ macro_rules! try_decode_packet {
     }
 }
 
-
-
 pub async fn read_server_packet_by_state<R>(
     reader: &mut R,
     state: ConnectionState,
@@ -45,13 +43,11 @@ where
     let packet_id = read_varint(&mut cursor).await?;
 
     match state {
-        ConnectionState::Login => {
-            Ok(try_decode_packet!(cursor, packet_id, {
-                0x00 => LoginDisconnect,
-                0x01 => EncryptionRequest,
-                0x02 => LoginSuccess
-            }))
-        }
+        ConnectionState::Login => Ok(try_decode_packet!(cursor, packet_id, {
+            0x00 => LoginDisconnect,
+            0x01 => EncryptionRequest,
+            0x02 => LoginSuccess
+        })),
         ConnectionState::Play => {
             let packet = try_decode_packet!(cursor, packet_id, {
                 0x00 => KeepAlive,
@@ -101,8 +97,13 @@ where
         _ => {
             let pos = cursor.position() as usize;
             let remaining = cursor.into_inner()[pos..].to_vec();
-            Err(io::Error::new(io::ErrorKind::Other, format!("Unsupported state for decoding: {:?}, packet_id: {}. Data: {:?}", state, packet_id, remaining)))
+            Err(io::Error::new(
+                io::ErrorKind::Other,
+                format!(
+                    "Unsupported state for decoding: {:?}, packet_id: {}. Data: {:?}",
+                    state, packet_id, remaining
+                ),
+            ))
         }
     }
 }
-

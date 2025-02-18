@@ -1,8 +1,8 @@
-use std::io;
 use rand::rngs::OsRng;
 use rand::RngCore;
-use rsa::{RsaPublicKey, PaddingScheme, PublicKey};
 use rsa::pkcs1::DecodeRsaPublicKey;
+use rsa::{PaddingScheme, PublicKey, RsaPublicKey};
+use std::io;
 use tokio::net::TcpStream;
 
 pub fn generate_random_bytes(n: usize) -> Vec<u8> {
@@ -17,7 +17,8 @@ pub fn encrypt_with_public_key(data: &[u8], public_key_bytes: &[u8]) -> io::Resu
         .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
     let padding = PaddingScheme::new_pkcs1v15_encrypt();
     let mut rng = OsRng;
-    public_key.encrypt(&mut rng, padding, data)
+    public_key
+        .encrypt(&mut rng, padding, data)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
 }
 

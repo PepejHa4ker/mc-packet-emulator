@@ -3,10 +3,10 @@ use crate::protocol::packets::Bound;
 #[macro_export]
 macro_rules! __packet_state {
     ($state:ident) => {
-         Some($crate::connection::ConnectionState::$state)
+        Some($crate::connection::ConnectionState::$state)
     };
     () => {
-         None
+        None
     };
 }
 
@@ -86,7 +86,6 @@ macro_rules! packets {
     }
 }
 
-
 #[macro_export]
 macro_rules! on_packet {
     ($conn:expr, $variant:ident, $handler:expr) => {{
@@ -108,4 +107,3 @@ macro_rules! on_packet {
         });
     }};
 }
-

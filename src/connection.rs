@@ -1,6 +1,6 @@
 use crate::protocol::packets::decoder::read_server_packet_by_state;
 use crate::protocol::packets::AsyncPacketExt;
-use crate::protocol::packets::{CChatMessage, LoginSuccess};
+use crate::protocol::packets::LoginSuccess;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use tokio::io;
@@ -15,7 +15,6 @@ pub enum ConnectionState {
     Play,
 }
 
-
 #[macro_export]
 macro_rules! process_packet {
     ($packet:expr, $packet_type:ty, $conn:expr, $handler:expr) => {
@@ -28,7 +27,7 @@ macro_rules! process_packet {
 pub struct Connection {
     pub stream: TcpStream,
     pub state: ConnectionState,
-    }
+}
 
 impl Connection {
     pub async fn connect(addr: &str) -> io::Result<Self> {
@@ -36,16 +35,14 @@ impl Connection {
         Ok(Self {
             stream,
             state: ConnectionState::Handshaking,
-                    })
+        })
     }
-
 
     async fn handle_login_success(&mut self) -> io::Result<()> {
         self.state = ConnectionState::Play;
         println!("Переход в состояние Play");
         Ok(())
     }
-
 
     pub async fn run(&mut self) -> io::Result<()> {
         loop {
@@ -55,10 +52,8 @@ impl Connection {
                     self.handle_login_success().await?;
                 }
             }
-
         }
     }
-
 
     pub async fn send_packet<P>(&mut self, packet: &P) -> io::Result<()>
     where
