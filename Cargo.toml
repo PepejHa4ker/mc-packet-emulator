@@ -1,0 +1,19 @@
+[package]
+name = "mc-packet-emulator"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+rsa = "0.7"
+rand = { version = "0.8", features = ["std"] }
+aes = "0.7"
+cfb8 = "0.7"
+async-trait = "0.1"
+flate2 = "1.0.35"
+
+[dependencies.uuid]
+version = "1.13.2"
+features = [
+    "v4",                # Lets you generate random UUIDs
+]
