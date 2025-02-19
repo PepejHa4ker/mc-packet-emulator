@@ -9,7 +9,7 @@ macro_rules! packet_field {
         }
     ) => {
         $( #[$meta] )*
-        #[derive(Debug, Clone)]
+        #[derive(Debug, Clone, PartialOrd, PartialEq)]
         pub struct $name(pub $inner);
 
         impl std::ops::Deref for $name {

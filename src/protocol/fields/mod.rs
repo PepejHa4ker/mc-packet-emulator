@@ -35,6 +35,9 @@ pub mod uuid;
 pub mod varint;
 pub mod varstring;
 pub mod vec;
+pub mod gameprofile;
+pub mod nbt;
+pub mod unimplemented;
 
 pub use boolean::Boolean;
 pub use byte::Byte;
@@ -52,3 +55,5 @@ pub use ushort::UShort;
 pub use uuid::Uuid;
 pub use varint::VarInt;
 pub use varstring::VarString;
+pub use gameprofile::GameProfile;
+pub use unimplemented::Unimplemented;

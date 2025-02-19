@@ -3,54 +3,64 @@ use crate::protocol::io::read_varint;
 use crate::protocol::packets::play::*;
 use crate::protocol::packets::{AsyncPacket, Bound, PlayerAbilities};
 use std::io;
-use std::io::Cursor;
-use tokio::io::{AsyncRead, AsyncReadExt};
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::atomic::Ordering::Relaxed;
+use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, BufReader};
+
+static DECODED_PACKETS: AtomicUsize = AtomicUsize::new(0);
 
 #[macro_export]
 macro_rules! try_decode_packet {
-    ($cursor:expr, $packet_id:expr, { $( $id:expr => $Type:ident ),* $(,)? }) => {
+    ($reader:expr, $packet_id:expr, { $( $id:expr => $Type:ident ),* $(,)? }) => {
         match $packet_id {
             $(
                 $id => {
-                    let pkt = $Type::read_from(&mut $cursor).await?;
+
+                    let pkt = $Type::read_from($reader).await?;
                     if $packet_id != 0x26 {
-                        println!("Got packet {:?} 0x{:X} ({})", pkt, $packet_id, $packet_id);
+
                     }
+                    DECODED_PACKETS.fetch_add(1, Ordering::Relaxed);
                     Box::new(pkt) as Box<dyn $crate::protocol::packets::AsyncPacket + Send>
                 }
             ),*,
             other => {
-                let pos = $cursor.position() as usize;
-                let remaining = $cursor.into_inner()[pos..].to_vec();
-                return Err(std::io::Error::new(std::io::ErrorKind::Other, format!("Unknown packet id: {}. Data: {:?}", other, remaining)));
+                let mut remaining = vec![0u8; 128];
+                let bytes_read = $reader.read(&mut remaining).await.unwrap_or(0);
+                remaining.truncate(bytes_read);
+                println!("DEBUG: Unknown packet. Packet ID: {:#X}, Remaining data: {:?}", other, &remaining[..]);
+                return Err(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    format!("Unknown packet id: 0x{:X}({}). Data: {:?}", other, other, remaining),
+                ));
             }
         }
     }
 }
 
+
 pub async fn read_server_packet_by_state<R>(
-    reader: &mut R,
+    reader: &mut BufReader<R>,
     state: ConnectionState,
 ) -> io::Result<Box<dyn AsyncPacket + Send>>
 where
     R: AsyncRead + Unpin + Send,
 {
     let packet_length = read_varint(reader).await?;
-    let mut buf = vec![0u8; packet_length as usize];
-    reader.read_exact(&mut buf).await?;
-    let mut cursor = Cursor::new(buf);
 
-    let packet_id = read_varint(&mut cursor).await?;
+    let mut limited_reader = reader.take(packet_length as u64);
 
-    match state {
-        ConnectionState::Login => Ok(try_decode_packet!(cursor, packet_id, {
+    let packet_id = read_varint(&mut limited_reader).await?;
+
+    let packet = match state {
+        ConnectionState::Login => Ok(try_decode_packet!(&mut limited_reader, packet_id, {
             0x00 => LoginDisconnect,
             0x01 => EncryptionRequest,
             0x02 => LoginSuccess
         })),
         ConnectionState::Play => {
-            let packet = try_decode_packet!(cursor, packet_id, {
-                0x00 => KeepAlive,
+            let packet = try_decode_packet!(&mut limited_reader, packet_id, {
+                0x00 => SKeepAlive,
                 0x01 => JoinGame,
                 0x02 => SChatMessage,
                 0x03 => TimeUpdate,
@@ -70,11 +80,11 @@ where
                 0x11 => SpawnExperienceOrb,
                 0x12 => EntityVelocity,
                 0x13 => DestroyEntities,
-                0x14 => EntityMovement,
-                0x15 => EntityLook,
+                0x14 => Entity,
+                0x15 => EntityRelMove,
                 0x16 => EntityLookAndMovement,
-                0x17 => EntityTeleport,
-                0x18 => EntityHeadLook,
+                0x17 => EntityLookMove,
+                0x18 => EntityTeleport,
                 0x19 => EntityStatus,
                 0x1A => AttachEntity,
                 0x1B => EntityMetadata,
@@ -87,23 +97,38 @@ where
                 0x3F => CustomPayload,
                 0x2B => ChangeGameState,
                 0x30 => WindowItems,
+                0x2E => CloseWindow,
+                0x27 => Explosion,
+                0x1F => SetExperience,
+                0x21 => ChunkData,
                 0x2F => SetSlot,
                 0x26 => MapChunkBulk,
                 0x20 => EntityProperties,
+                0x35 => UpdateTileEntity,
+                0x29 => SoundEffect,
+                0x23 => BlockChange,
+                0x28 => Effect,
+                0x22 => MultiBlockChange,
             });
+
             assert_eq!(packet.get_bound(), Bound::Server);
             Ok(packet)
         }
-        _ => {
-            let pos = cursor.position() as usize;
-            let remaining = cursor.into_inner()[pos..].to_vec();
-            Err(io::Error::new(
-                io::ErrorKind::Other,
-                format!(
-                    "Unsupported state for decoding: {:?}, packet_id: {}. Data: {:?}",
-                    state, packet_id, remaining
-                ),
-            ))
-        }
+        _ => Err(io::Error::new(
+            io::ErrorKind::Other,
+            format!("Unsupported state for decoding: {:?}", state),
+        )),
+    };
+
+    let remaining = limited_reader.limit();
+    if remaining > 0 {
+        let mut discard = vec![0u8; remaining as usize];
+        limited_reader.read_exact(&mut discard).await?;
     }
+
+
+
+
+    packet
 }
+

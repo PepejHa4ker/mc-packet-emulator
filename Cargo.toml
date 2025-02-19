@@ -11,6 +11,8 @@ aes = "0.7"
 cfb8 = "0.7"
 async-trait = "0.1"
 flate2 = "1.0.35"
+luna_nbt = "0.0.3"
+time = "0.3.37"
 
 [dependencies.uuid]
 version = "1.13.2"

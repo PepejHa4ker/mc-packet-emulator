@@ -41,7 +41,7 @@ macro_rules! packets {
                     Self::BOUND
                 }
 
-                                pub async fn read_from<R>(reader: &mut R) -> std::io::Result<Self>
+                pub async fn read_from<R>(reader: &mut R) -> std::io::Result<Self>
                 where
                     R: tokio::io::AsyncRead + std::marker::Unpin + Send,
                 {
