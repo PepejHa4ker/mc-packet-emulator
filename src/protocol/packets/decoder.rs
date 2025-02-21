@@ -1,10 +1,10 @@
 use crate::protocol::io::read_varint;
 use crate::protocol::packets::server::*;
-use crate::protocol::packets::*;
 use std::io;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::io::{AsyncRead, AsyncReadExt, BufReader};
 use crate::connection::connection_state::ConnectionState;
+use crate::protocol::packets::{AsyncPacket, Bound};
 
 static DECODED_PACKETS: AtomicUsize = AtomicUsize::new(0);
 
@@ -126,9 +126,6 @@ where
         let mut discard = vec![0u8; remaining as usize];
         limited_reader.read_exact(&mut discard).await?;
     }
-
-
-
 
     packet
 }

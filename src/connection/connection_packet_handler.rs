@@ -1,6 +1,6 @@
-use crate::connection::connection::{Connection};
+use crate::connection::connection::Connection;
 use crate::connection::connection_state::ConnectionState;
-use crate::protocol::fields::{ByteArrayVarInt, VarString};
+use crate::protocol::fields::{ByteArrayShort, VarString};
 use crate::protocol::packets::*;
 
 impl ServerPacketHandler for Connection {
@@ -16,7 +16,7 @@ impl ServerPacketHandler for Connection {
         println!("Login success! username: {:?}, uuid: {:?}", &packet.username, &packet.uuid);
     }
 
-    async fn handle_keep_alive(&mut self, packet: KeepAlive) {
+    async fn handle_keep_alive(&mut self, packet: server::KeepAlive) {
         println!("Received keepalive");
         let c_keep_alive = client::KeepAlive { keep_alive_id: packet.keep_alive_id };
         self.send_packet(&c_keep_alive).await;
@@ -210,12 +210,12 @@ impl ServerPacketHandler for Connection {
         todo!()
     }
 
-    async fn handle_custom_payload(&mut self, packet: CustomPayload) {
+    async fn handle_custom_payload(&mut self, packet: server::CustomPayload) {
         if packet.channel.0 == "FML|HS" {
             println!("Received FML handshake payload: {:?}", packet.data.0);
             let response_channel = VarString("FML|HS".to_string());
-            let response_data = ByteArrayVarInt(vec![0x00]);
-            let response_packet = CustomPayload {
+            let response_data = ByteArrayShort(vec![0x00]);
+            let response_packet = client::CustomPayload {
                 channel: response_channel,
                 data: response_data,
             };

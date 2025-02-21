@@ -1,7 +1,6 @@
-use async_trait::async_trait;
 use std::any::Any;
 use tokio::io;
-use tokio::io::{AsyncRead, AsyncWrite, AsyncWriteExt};
+use tokio::io::{AsyncWrite};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum Bound {
@@ -42,6 +41,6 @@ pub mod decoder;
 pub mod server;
 pub mod client;
 
-pub use server::*;
-pub use client::*;
 use crate::connection::connection_state::ConnectionState;
+pub use client::*;
+pub(crate) use server::*;

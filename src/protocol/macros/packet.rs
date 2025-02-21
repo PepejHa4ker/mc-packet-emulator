@@ -1,5 +1,3 @@
-use crate::protocol::packets::AsyncPacketExt;
-
 #[macro_export]
 macro_rules! __packet_state {
     ($state:ident) => {
@@ -34,7 +32,7 @@ macro_rules! server_packets {
                 match (id, state) {
                     $(
                         ($id, $crate::__packet_state!($state)) => {
-                            if let Some(concrete) = packet.as_packet()::<$name>() {
+                            if let Some(concrete) = packet.as_any().downcast_ref::<$name>() {
                                 return Some(Self::$name(concrete.clone()));
                             }
                         }
@@ -78,7 +76,7 @@ macro_rules! server_packets {
                 fn get_state(&self) -> Option<$crate::connection::connection_state::ConnectionState> { Self::PACKET_STATE }
                 fn get_bound(&self) -> $crate::protocol::packets::Bound { Self::BOUND }
                 fn as_any(&self) -> &dyn std::any::Any { self }
-                async fn write_to_boxed(&self, writer: &mut (dyn tokio::io::AsyncWrite + Unpin + Send)) -> std::io::Result<()> {
+                async fn write_to_boxed(&self, _writer: &mut (dyn tokio::io::AsyncWrite + Unpin + Send)) -> std::io::Result<()> {
                     if Self::BOUND != $crate::protocol::packets::Bound::Client {
                         panic!("write_to_boxed() called on a server-bound packet: {:?}", Self::PACKET_ID);
                     }

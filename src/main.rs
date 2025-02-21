@@ -3,7 +3,6 @@ use crate::connection::connection_state::ConnectionState;
 use crate::protocol::fields::ByteArrayShort;
 use crate::protocol::packets::{client, Handshake, LoginStart};
 use protocol::fields::{UShort, VarInt, VarString};
-use protocol::packets::AsyncPacket;
 use std::io;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -41,9 +40,7 @@ async fn main() -> io::Result<()> {
                     println!("Handshake отправлен от клиента flowler");
                     conn_lock.state = ConnectionState::Login;
                     let channels = VarString("REGISTER".to_string());
-
-
-
+                    
                     let custom_paylaod = client::CustomPayload {
                         channel: channels,
                         data: ByteArrayShort("FML|HS".to_string().into_bytes())
@@ -57,8 +54,6 @@ async fn main() -> io::Result<()> {
                     conn_lock.send_packet(&login_start).await;
                     println!("LoginStart отправлен от клиента flowler{}", i);
 
-                    let channels = VarString("FML|HS".to_string());
-                    // Если требуется регистрация нескольких каналов, их можно объединить с разделителем "\0", например:
 
                 }
 

@@ -1,6 +1,8 @@
+use crate::connection::connection_state::ConnectionState;
 use crate::protocol::fields::{Boolean, Double, Float, Int};
 use crate::protocol::packets::decoder::read_server_packet_by_state;
 use crate::protocol::packets::server::*;
+use crate::protocol::packets::{AsyncPacket, PlayerPosLook};
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
@@ -9,8 +11,6 @@ use tokio::io;
 use tokio::io::{AsyncRead, AsyncWrite, BufReader, ReadBuf};
 use tokio::net::TcpStream;
 use tokio::sync::Mutex;
-use crate::connection::connection_state::ConnectionState;
-use crate::protocol::packets::{client, AsyncPacket, PlayerPosLook};
 
 
 #[macro_export]
@@ -60,13 +60,11 @@ impl Connection {
     pub async fn start_moving_in_circle(
         conn: Arc<Mutex<Connection>>,
         start_x: f64,
-        start_y: f64,
         start_z: f64,
     ) {
         let radius: f32 = 5.0;
-        let step_count = 100;
 
-        let mut angle: f32 = 0.0;
+        let angle: f32 = 0.0;
         let interval = Duration::from_millis(100);
 
         let mut interval_timer = tokio::time::interval(interval);
@@ -75,8 +73,8 @@ impl Connection {
             interval_timer.tick().await;
             let mut conn_lock = conn.lock().await;
 
-            let new_x = ((start_x as f32) + radius * (angle).cos()) as f64;
-            let new_z = ((start_z as f32) + radius * (angle).sin()) as f64;
+            let new_x = ((start_x as f32) + radius * angle.cos()) as f64;
+            let new_z = ((start_z as f32) + radius * angle.sin()) as f64;
 
             let move_packet = PlayerPosLook {
                 x: Double(new_x),
