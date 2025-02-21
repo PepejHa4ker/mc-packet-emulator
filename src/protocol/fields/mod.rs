@@ -1,22 +1,21 @@
 use std::future::Future;
 use std::pin::Pin;
+use async_trait::async_trait;
 use tokio::io;
+use tokio::io::{AsyncRead, AsyncWrite};
 
+#[async_trait]
 pub trait AsyncReadField: Sized {
-    fn read_field<'a, R>(
-        r: &'a mut R,
-    ) -> Pin<Box<dyn Future<Output = io::Result<Self>> + Send + 'a>>
+    async fn read_field<R>(r: &mut R) -> io::Result<Self>
     where
-        R: io::AsyncRead + Unpin + Send + 'a;
+        R: AsyncRead + Unpin + Send;
 }
 
+#[async_trait]
 pub trait AsyncWriteField {
-    fn write_field<'a, W>(
-        &'a self,
-        w: &'a mut W,
-    ) -> Pin<Box<dyn Future<Output = io::Result<()>> + Send + 'a>>
+    async fn write_field<W>(&self, w: &mut W) -> io::Result<()>
     where
-        W: io::AsyncWrite + Unpin + Send + 'a;
+        W: AsyncWrite + Unpin + Send;
 }
 
 pub mod boolean;
@@ -41,9 +40,8 @@ pub mod unimplemented;
 
 pub use boolean::Boolean;
 pub use byte::Byte;
-pub use byte_array::ByteArray;
+pub use byte_array::*;
 pub use double::Double;
-pub use entity_property::EntityAttributeModifier;
 pub use entity_property::EntityProperty;
 pub use float::Float;
 pub use int::Int;
@@ -52,7 +50,6 @@ pub use long::Long;
 pub use properties::Properties;
 pub use short::Short;
 pub use ushort::UShort;
-pub use uuid::Uuid;
 pub use varint::VarInt;
 pub use varstring::VarString;
 pub use gameprofile::GameProfile;

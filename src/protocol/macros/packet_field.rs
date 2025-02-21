@@ -24,31 +24,34 @@ macro_rules! packet_field {
             pub async fn write(&$selfvar, $w: &mut $wty) -> $retw $write_block
         }
 
+        #[async_trait::async_trait]
         impl $crate::protocol::fields::AsyncReadField for $name {
-            fn read_field<'a, R>(r: &'a mut R) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<Self>> + Send + 'a>>
+            async fn read_field<R>(r: &mut R) -> std::io::Result<Self>
             where
-                R: tokio::io::AsyncRead + Unpin + Send + 'a,
+                R: tokio::io::AsyncRead + Unpin + Send,
             {
-                Box::pin(Self::read(r))
+                Self::read(r).await
             }
         }
 
+        #[async_trait::async_trait]
         impl $crate::protocol::fields::AsyncWriteField for $name {
-            fn write_field<'a, W>(&'a self, w: &'a mut W) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<()>> + Send + 'a>>
+            async fn write_field<W>(&self, w: &mut W) -> std::io::Result<()>
             where
-                W: tokio::io::AsyncWrite + Unpin + Send + 'a,
+                W: tokio::io::AsyncWrite + Unpin + Send,
             {
-                Box::pin(self.write(w))
+                self.write(w).await
             }
         }
     }
 }
 
+
 #[macro_export]
 macro_rules! map_field {
     ($name:ident, $key:ty, $value:ty) => {
         #[derive(Debug, Clone)]
-                pub struct $name(pub std::collections::HashMap<<$key as std::ops::Deref>::Target, $value>);
+        pub struct $name(pub std::collections::HashMap<<$key as std::ops::Deref>::Target, $value>);
 
         impl $name {
             pub fn new() -> Self {
@@ -56,44 +59,37 @@ macro_rules! map_field {
             }
         }
 
+        #[async_trait::async_trait]
         impl $crate::protocol::fields::AsyncReadField for $name {
-            fn read_field<'a, R>(
-                r: &'a mut R
-            ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<Self>> + Send + 'a>>
+            async fn read_field<R>(r: &mut R) -> std::io::Result<Self>
             where
-                R: tokio::io::AsyncRead + std::marker::Unpin + Send + 'a,
+                R: tokio::io::AsyncRead + std::marker::Unpin + Send,
             {
-                Box::pin(async move {
-                                        let size = <$crate::protocol::fields::VarInt>::read_field(r).await?.0 as usize;
-                    let mut map = std::collections::HashMap::new();
-                    for _ in 0..size {
-                        let key_val = <$key as $crate::protocol::fields::AsyncReadField>::read_field(r).await?;
-                        let value = <$value as $crate::protocol::fields::AsyncReadField>::read_field(r).await?;
-                                                map.insert((*key_val).clone(), value);
-                    }
-                    Ok($name(map))
-                })
+                let size = <$crate::protocol::fields::VarInt>::read_field(r).await?.0 as usize;
+                let mut map = std::collections::HashMap::new();
+                for _ in 0..size {
+                    let key_val = <$key as $crate::protocol::fields::AsyncReadField>::read_field(r).await?;
+                    let value = <$value as $crate::protocol::fields::AsyncReadField>::read_field(r).await?;
+                    map.insert((*key_val).clone(), value);
+                }
+                Ok($name(map))
             }
         }
 
+        #[async_trait::async_trait]
         impl $crate::protocol::fields::AsyncWriteField for $name {
-            fn write_field<'a, W>(
-                &'a self,
-                w: &'a mut W
-            ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::io::Result<()>> + Send + 'a>>
+            async fn write_field<W>(&self, w: &mut W) -> std::io::Result<()>
             where
-                W: tokio::io::AsyncWrite + std::marker::Unpin + Send + 'a,
+                W: tokio::io::AsyncWrite + std::marker::Unpin + Send,
             {
-                Box::pin(async move {
-                                        let size = self.0.len() as i32;
-                    $crate::protocol::fields::VarInt(size).write_field(w).await?;
-                    for (key, value) in &self.0 {
-                                                                        let key_wrapper: $key = <$key>::from(key.clone());
-                        key_wrapper.write_field(w).await?;
-                        value.write_field(w).await?;
-                    }
-                    Ok(())
-                })
+                let size = self.0.len() as i32;
+                $crate::protocol::fields::VarInt(size).write_field(w).await?;
+                for (key, value) in &self.0 {
+                    let key_wrapper: $key = <$key>::from(key.clone());
+                    key_wrapper.write_field(w).await?;
+                    value.write_field(w).await?;
+                }
+                Ok(())
             }
         }
     }
