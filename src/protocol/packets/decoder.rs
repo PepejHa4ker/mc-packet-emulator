@@ -1,11 +1,10 @@
-use crate::connection::ConnectionState;
 use crate::protocol::io::read_varint;
-use crate::protocol::packets::play::*;
-use crate::protocol::packets::{AsyncPacket, Bound, PlayerAbilities};
+use crate::protocol::packets::server::*;
+use crate::protocol::packets::*;
 use std::io;
 use std::sync::atomic::{AtomicUsize, Ordering};
-use std::sync::atomic::Ordering::Relaxed;
-use tokio::io::{AsyncBufRead, AsyncBufReadExt, AsyncRead, AsyncReadExt, BufReader};
+use tokio::io::{AsyncRead, AsyncReadExt, BufReader};
+use crate::connection::connection_state::ConnectionState;
 
 static DECODED_PACKETS: AtomicUsize = AtomicUsize::new(0);
 
@@ -15,17 +14,17 @@ macro_rules! try_decode_packet {
         match $packet_id {
             $(
                 $id => {
-
+                    // println!("Decoding packet with id 0x{:X}", $packet_id);
                     let pkt = $Type::read_from($reader).await?;
                     if $packet_id != 0x26 {
-
+                        // println!("Got packet 0x{:X}({}): {:?}", $packet_id, $packet_id, pkt);
                     }
                     DECODED_PACKETS.fetch_add(1, Ordering::Relaxed);
                     Box::new(pkt) as Box<dyn $crate::protocol::packets::AsyncPacket + Send>
                 }
             ),*,
             other => {
-                let mut remaining = vec![0u8; 128];
+                let mut remaining = vec![0u8; 1024];
                 let bytes_read = $reader.read(&mut remaining).await.unwrap_or(0);
                 remaining.truncate(bytes_read);
                 println!("DEBUG: Unknown packet. Packet ID: {:#X}, Remaining data: {:?}", other, &remaining[..]);
@@ -46,6 +45,8 @@ pub async fn read_server_packet_by_state<R>(
 where
     R: AsyncRead + Unpin + Send,
 {
+    let remaining = reader.buffer();
+    println!("There are {} remaining bytes", remaining.len());
     let packet_length = read_varint(reader).await?;
 
     let mut limited_reader = reader.take(packet_length as u64);
@@ -60,7 +61,7 @@ where
         })),
         ConnectionState::Play => {
             let packet = try_decode_packet!(&mut limited_reader, packet_id, {
-                0x00 => SKeepAlive,
+                0x00 => KeepAlive,
                 0x01 => JoinGame,
                 0x02 => SChatMessage,
                 0x03 => TimeUpdate,

@@ -152,7 +152,7 @@ pub async fn write_uuid<W: AsyncWrite + Unpin>(writer: &mut W, data: &Uuid) -> i
     Ok(())
 }
 
-pub async fn read_bytearray<R: AsyncRead + Unpin>(reader: &mut R) -> io::Result<Vec<u8>> {
+pub async fn read_bytearray_varint<R: AsyncRead + Unpin>(reader: &mut R) -> io::Result<Vec<u8>> {
     let len = read_varint(reader).await?;
     if len < 0 {
         return Err(io::Error::new(io::ErrorKind::InvalidData, "Negative array length"));
@@ -162,8 +162,40 @@ pub async fn read_bytearray<R: AsyncRead + Unpin>(reader: &mut R) -> io::Result<
     Ok(buf)
 }
 
-pub async fn write_bytearray<W: AsyncWrite + Unpin>(writer: &mut W, data: &[u8]) -> io::Result<()> {
+pub async fn write_bytearray_varint<W: AsyncWrite + Unpin>(writer: &mut W, data: &[u8]) -> io::Result<()> {
     write_varint(writer, data.len() as i32).await?;
+    writer.write_all(data).await?;
+    Ok(())
+}
+
+pub async fn read_bytearray_short<R: AsyncRead + Unpin>(reader: &mut R) -> io::Result<Vec<u8>> {
+    let len = read_i16_be(reader).await?;
+    if len < 0 {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "Negative array length"));
+    }
+    let mut buf = vec![0u8; len as usize];
+    reader.read_exact(&mut buf).await?;
+    Ok(buf)
+}
+
+pub async fn read_bytearray_int<R: AsyncRead + Unpin>(reader: &mut R) -> io::Result<Vec<u8>> {
+    let len = read_i32_be(reader).await?;
+    if len < 0 {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "Negative array length"));
+    }
+    let mut buf = vec![0u8; len as usize];
+    reader.read_exact(&mut buf).await?;
+    Ok(buf)
+}
+
+pub async fn write_bytearray_int<W: AsyncWrite + Unpin>(writer: &mut W, data: &[u8]) -> io::Result<()> {
+    write_i32_be(writer, data.len() as i32).await?;
+    writer.write_all(data).await?;
+    Ok(())
+}
+
+pub async fn write_bytearray_short<W: AsyncWrite + Unpin>(writer: &mut W, data: &[u8]) -> io::Result<()> {
+    write_i16_be(writer, data.len() as i16).await?;
     writer.write_all(data).await?;
     Ok(())
 }

@@ -39,11 +39,9 @@ impl AsyncPacketExt for dyn AsyncPacket + Send {
 }
 
 pub mod decoder;
-pub mod handshake;
-pub mod login;
-pub mod play;
+pub mod server;
+pub mod client;
 
-use crate::connection::ConnectionState;
-pub use handshake::*;
-pub use login::*;
-pub use play::*;
+pub use server::*;
+pub use client::*;
+use crate::connection::connection_state::ConnectionState;
