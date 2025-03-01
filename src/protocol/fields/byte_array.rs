@@ -18,12 +18,12 @@ packet_field! {
 packet_field! {
     ByteArrayShort(Vec<u8>) {
         async fn read(r: &mut impl AsyncRead + Unpin) -> io::Result<Self> {
-            let arr = crate::protocol::io::read_bytearray_varint(r).await?;
+            let arr = crate::protocol::io::read_bytearray_short(r).await?;
             Ok(ByteArrayShort(arr))
         }
 
         async fn write(&self, w: &mut impl AsyncWrite + Unpin) -> io::Result<()> {
-            crate::protocol::io::write_bytearray_varint(w, &self.0).await
+            crate::protocol::io::write_bytearray_short(w, &self.0).await
         }
     }
 }

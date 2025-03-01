@@ -1,24 +1,62 @@
+use crate::auth::join_auth_server;
 use crate::connection::connection::Connection;
 use crate::connection::connection_state::ConnectionState;
+use crate::protocol::crypto::{encrypt_with_server_pubkey, generate_shared_secret};
 use crate::protocol::fields::{ByteArrayShort, VarString};
 use crate::protocol::packets::*;
 
 impl ServerPacketHandler for Connection {
-    async fn handle_login_disconnect(&mut self, _packet: LoginDisconnect) {
-        todo!()
+    async fn handle_login_disconnect(&mut self, packet: LoginDisconnect) {
+        println!("Got login disconnect packet: {:?}", packet);
     }
 
-    async fn handle_encryption_request(&mut self, _packet: EncryptionRequest) {
-        todo!()
+    async fn handle_encryption_request(&mut self, packet: EncryptionRequest) {
+        let server_id_str = &packet.server_id.0; 
+        let shared_secret = generate_shared_secret();
+        let encrypted_secret =
+            encrypt_with_server_pubkey(&shared_secret, &packet.public_key.0).unwrap();
+        let encrypted_token =
+            encrypt_with_server_pubkey(&packet.verify_token.0, &packet.public_key.0).unwrap();
+
+        let response = EncryptionResponse {
+            shared_secret: ByteArrayShort(encrypted_secret),
+            verify_token: ByteArrayShort(encrypted_token),
+        };
+        self.send_packet(&response).await;
+
+        self.enable_encryption(&shared_secret).unwrap();
+        println!("Encrypted!!!");
+
+        let access_token = "";
+        let selected_profile = "";
+
+        match join_auth_server(
+            server_id_str,
+            &shared_secret,
+            &packet.public_key.0,
+            access_token,
+            selected_profile,
+        )
+        .await
+        {
+            Ok(_) => println!("Successfully joined auth server!"),
+            Err(e) => eprintln!("Failed to join auth server: {}", e),
+        }
     }
+
     async fn handle_login_success(&mut self, packet: LoginSuccess) {
         self.state = ConnectionState::Play;
-        println!("Login success! username: {:?}, uuid: {:?}", &packet.username, &packet.uuid);
+        println!(
+            "Login success! username: {:?}, uuid: {:?}",
+            &packet.username, &packet.uuid
+        );
     }
 
     async fn handle_keep_alive(&mut self, packet: server::KeepAlive) {
         println!("Received keepalive");
-        let c_keep_alive = client::KeepAlive { keep_alive_id: packet.keep_alive_id };
+        let c_keep_alive = client::KeepAlive {
+            keep_alive_id: packet.keep_alive_id,
+        };
         self.send_packet(&c_keep_alive).await;
     }
 

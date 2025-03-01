@@ -3,31 +3,25 @@ use rand::RngCore;
 use rsa::pkcs1::DecodeRsaPublicKey;
 use rsa::{PaddingScheme, PublicKey, RsaPublicKey};
 use std::io;
-use tokio::net::TcpStream;
+use rsa::pkcs8::DecodePublicKey;
 
-pub fn generate_random_bytes(n: usize) -> Vec<u8> {
-    let mut buf = vec![0u8; n];
-    let mut rng = OsRng;
-    rng.fill_bytes(&mut buf);
-    buf
-}
-
-pub fn encrypt_with_public_key(data: &[u8], public_key_bytes: &[u8]) -> io::Result<Vec<u8>> {
-    let public_key = RsaPublicKey::from_pkcs1_der(public_key_bytes)
-        .map_err(|e| io::Error::new(io::ErrorKind::InvalidInput, e))?;
+pub (crate) fn encrypt_with_server_pubkey(data: &[u8], server_pub_key_der: &[u8]) -> io::Result<Vec<u8>> {
+    let public_key = RsaPublicKey::from_public_key_der(server_pub_key_der)
+        .map_err(|e| {
+            io::Error::new(io::ErrorKind::InvalidData, e)
+        })?;
     let padding = PaddingScheme::new_pkcs1v15_encrypt();
     let mut rng = OsRng;
-    public_key
-        .encrypt(&mut rng, padding, data)
+    public_key.encrypt(&mut rng, padding, data)
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+}
+
+pub (crate) fn generate_shared_secret() -> [u8; 16] {
+    let mut secret = [0u8; 16];
+    let mut rng = OsRng;
+    rng.fill_bytes(&mut secret);
+    secret
 }
 
 pub mod encrypted_stream;
 pub use encrypted_stream::EncryptedStream;
-
-pub fn enable_encryption<T>(stream: &mut T, shared_secret: Vec<u8>) -> io::Result<EncryptedStream>
-where
-    T: AsMut<TcpStream>,
-{
-    EncryptedStream::new(stream.as_mut(), &shared_secret)
-}

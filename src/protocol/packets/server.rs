@@ -8,8 +8,8 @@ server_packets! {
         },
         EncryptionRequest (0x01, Login) {
             server_id: VarString,
-            public_key: ByteArrayVarInt,
-            verify_token: ByteArrayVarInt
+            public_key: ByteArrayShort,
+            verify_token: ByteArrayShort
         },
         LoginSuccess (0x02, Login) {
             uuid: VarString,

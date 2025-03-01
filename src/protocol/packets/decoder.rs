@@ -3,6 +3,7 @@ use crate::protocol::packets::server::*;
 use std::io;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use tokio::io::{AsyncRead, AsyncReadExt, BufReader};
+use crate::connection::conn_reader::ConnReader;
 use crate::connection::connection_state::ConnectionState;
 use crate::protocol::packets::{AsyncPacket, Bound};
 
@@ -39,19 +40,20 @@ macro_rules! try_decode_packet {
 
 
 pub async fn read_server_packet_by_state<R>(
-    reader: &mut BufReader<R>,
+    reader: &mut R,
     state: ConnectionState,
 ) -> io::Result<Box<dyn AsyncPacket + Send>>
 where
     R: AsyncRead + Unpin + Send,
 {
-    let remaining = reader.buffer();
-    println!("There are {} remaining bytes", remaining.len());
     let packet_length = read_varint(reader).await?;
+    println!("Packet length {}", packet_length);
 
     let mut limited_reader = reader.take(packet_length as u64);
 
     let packet_id = read_varint(&mut limited_reader).await?;
+    println!("Packet id 0x{:X}", packet_id);
+    
 
     let packet = match state {
         ConnectionState::Login => Ok(try_decode_packet!(&mut limited_reader, packet_id, {

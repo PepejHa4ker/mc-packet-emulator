@@ -1,6 +1,4 @@
 use crate::client_packets;
-use crate::protocol::fields::*;
-
 client_packets! {
     pub enum ClientPacket {
         Handshake (0x00, Handshaking) {
@@ -10,7 +8,12 @@ client_packets! {
             next_state: VarInt
         },
         LoginStart (0x00, Login) {
-            name: VarString
+            name: VarString,
+            devices: ByteArrayShort,
+        },
+        EncryptionResponse (0x01, Login) {
+            shared_secret: ByteArrayShort,
+            verify_token: ByteArrayShort
         },
         KeepAlive (0x00, Play) {
             keep_alive_id: Int
@@ -44,3 +47,5 @@ client_packets! {
         }
     }
 }
+
+use crate::protocol::fields::*;
