@@ -6,6 +6,7 @@ use protocol::fields::{UShort, VarInt, VarString};
 use std::io;
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use crate::protocol::{ping, query};
 
 pub mod connection;
 pub mod protocol;
@@ -17,6 +18,47 @@ const HWID_BYTES: &[u8] = &[0, 44, 104, 52, 86, 103, 86, 70, 89, 85, 110, 49, 11
 async fn main() -> io::Result<()> {
     let addr = "s36.mcskill.net:25565";
     let username = "flowler";
+
+    match query::full_query(addr).await {
+        Ok(query_resp) => {
+            println!("Full Query Response:");
+            println!("MOTD: {}", query_resp.motd);
+            println!("Game Type: {}", query_resp.game_type);
+            println!("Map: {}", query_resp.map);
+            println!(
+                "Players: {} / {}",
+                query_resp.online_players, query_resp.max_players
+            );
+            if let Some(plugins) = query_resp.plugins {
+                println!("Plugins: {}", plugins);
+            }
+            if let Some(plugin_list) = query_resp.plugin_list {
+                println!("Plugin List: {:?}", plugin_list);
+            }
+            println!("Player names: {:?}", query_resp.players);
+        }
+        Err(e) => {
+            eprintln!("Error executing full query: {}", e);
+        }
+    }
+
+    match ping::ping_status(addr).await {
+        Ok(ping_resp) => {
+            println!("Ping Response:");
+            println!("MOTD: {}", ping_resp.motd);
+            println!("Version: {} (protocol {})", ping_resp.version_name, ping_resp.protocol);
+            println!(
+                "Players: {} / {}",
+                ping_resp.online_players, ping_resp.max_players
+            );
+            println!("Latency: {} ms", ping_resp.latency_ms);
+        }
+        Err(e) => {
+            eprintln!("Error executing ping: {}", e);
+        }
+    }
+    
+
     let mut handles = Vec::new();
 
     for i in 0..1 {
@@ -45,13 +87,11 @@ async fn main() -> io::Result<()> {
                     println!("Handshake for client {} was sent.", username);
                     let login_start = LoginStart {
                         name: VarString(username.to_string()),
-                        devices: ByteArrayShort(HWID_BYTES.to_vec())
+                        devices: ByteArrayShort(HWID_BYTES.to_vec()),
                     };
 
                     conn_lock.send_packet(&login_start).await;
                     println!("LoginStart was sent for client {}", username);
-
-
                 }
 
                 run_handle.await.expect("run() Error");

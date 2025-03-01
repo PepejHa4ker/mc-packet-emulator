@@ -36,8 +36,7 @@ impl ServerPacketHandler for Connection {
             &packet.public_key.0,
             access_token,
             selected_profile,
-        )
-        .await
+        ).await
         {
             Ok(_) => println!("Successfully joined auth server!"),
             Err(e) => eprintln!("Failed to join auth server: {}", e),

@@ -1,17 +1,11 @@
-use crate::connection::connection_state::ConnectionState;
 use crate::connection::conn_reader::ConnReader;
-use crate::protocol::fields::{Boolean, Double, Float, Int};
+use crate::connection::connection_state::ConnectionState;
 use crate::protocol::packets::decoder::read_server_packet_by_state;
 use crate::protocol::packets::server::*;
-use crate::protocol::packets::{AsyncPacket, PlayerPosLook};
-use std::pin::Pin;
-use std::sync::Arc;
-use std::task::{Context, Poll};
-use std::time::Duration;
+use crate::protocol::packets::AsyncPacket;
 use tokio::io;
-use tokio::io::{AsyncRead, AsyncWrite, BufReader, ReadBuf};
+use tokio::io::BufReader;
 use tokio::net::TcpStream;
-use tokio::sync::Mutex;
 
 #[macro_export]
 macro_rules! process_packet {
