@@ -20,7 +20,7 @@ macro_rules! process_packet {
         if let Some(packet) = $packet_enum::try_from(boxed_packet) {
             packet.handle_by($handler).await;
         } else {
-            // Неизвестный пакет
+            // Unknown, give up
         }
     }};
 }
@@ -49,7 +49,6 @@ impl Connection {
     /// Основной цикл чтения входящих пакетов
     pub async fn run(&mut self) -> io::Result<()> {
         loop {
-            // Достаём &mut ConnReader из self.reader
             let r = match self.reader.as_mut() {
                 Some(r) => r,
                 None => {
@@ -60,12 +59,10 @@ impl Connection {
                 }
             };
 
-            // Передаём "r" в макрос process_packet! (нужен &mut R: AsyncRead + ...)
             process_packet!(&mut *r, self.state, self, ServerPacket);
         }
     }
 
-    /// Отправляем пакет на сервер
     pub async fn send_packet<P>(&mut self, packet: &P)
     where
         P: AsyncPacket,
@@ -83,39 +80,6 @@ impl Connection {
         }
     }
 
-    /// Пример функции, которая двигает игрока по кругу (необязательно)
-    pub async fn start_moving_in_circle(
-        conn: Arc<Mutex<Connection>>,
-        start_x: f64,
-        start_z: f64,
-    ) {
-        let radius: f32 = 5.0;
-        let mut angle: f32 = 0.0;
-        let interval = Duration::from_millis(100);
-
-        let mut interval_timer = tokio::time::interval(interval);
-
-        loop {
-            interval_timer.tick().await;
-            let mut conn_lock = conn.lock().await;
-
-            angle += 0.1;
-            let new_x = ((start_x as f32) + radius * angle.cos()) as f64;
-            let new_z = ((start_z as f32) + radius * angle.sin()) as f64;
-
-            let move_packet = PlayerPosLook {
-                x: Double(new_x),
-                y: Double(64.0),
-                stance: Double(16.0),
-                z: Double(new_z),
-                yaw: Float(angle.to_degrees()),
-                pitch: Float(0.0),
-                on_ground: Boolean(true),
-            };
-
-            conn_lock.send_packet(&move_packet).await;
-        }
-    }
 
     /// Включение шифрования:
     /// - Берём старый Plain-стрим (ConnReader::Plain)
